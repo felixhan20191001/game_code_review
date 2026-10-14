@@ -1,0 +1,7 @@
+interface:
+  display_name: "Game Code Review"
+  short_description: "审查游戏逻辑与回归，优先排查崩溃卡死和广告平台风险，维护代码地图"
+  default_prompt: "/game-code-review：在本对话持续使用 $game-code-review 审查游戏需求与代码，直到我输入 stop-review 或明确要求恢复自动调用；按规则维护项目外代码地图。整体回归先查稳定性，广告审查追踪平台桥接与回调生命周期；优先报告崩溃、闪退和全局卡死，分别标明严重度、现象与根因证据，再以玩家语言给出复现步骤和代码证据。"
+
+policy:
+  allow_implicit_invocation: true
