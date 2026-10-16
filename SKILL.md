@@ -50,6 +50,8 @@ metadata:
 
 先按问题类型读取对应章节；同一任务可命中多行，只补充实际相关的专项内容。此表决定阅读入口，不限制需要追踪的代码影响范围。各清单中的 R/S/A/F/C 编号是稳定定位标识。
 
+**控制开销：** 简单问题只检查相关约束和直接依赖，允许简记；仅多阶段或跨模块功能展开相关依赖。已有记录经当前需求与代码核实后复用，只更新变化或证据缺口，不每轮重建。报告只展示影响结论的关系，不输出完整内部分析，不强制另建表或图。
+
 多行命中时，先查最具体的规则或现象：条件拒绝仍扣资源先 R2，到账次数或金额错误先 A2；无法继续先 S3，确认涉及界面开关／复用后再补 F2。不要仅凭“返回游戏”等模糊说法预设具体机制。
 
 | 用户问题或代码信号 | 首读章节 | 涉及时补充 |
@@ -59,7 +61,7 @@ metadata:
 | 广告检查、广告初始化／加载／展示／返回异常 | [C3 广告完整链路](references/stability-sdk-review-checklist.md#c3-ads) | [C2 跨语言与平台边界](references/stability-sdk-review-checklist.md#c2-native)、S3 恢复、A2 奖励 |
 | 崩溃、闪退、ANR、启动失败、全局无响应；原生回调新增 Post／异步派发／跨帧保存 | [C1 稳定性初筛](references/stability-sdk-review-checklist.md#c1-triage) | [C2 所有权与线程](references/stability-sdk-review-checklist.md#c2-native)、[C4 验证](references/stability-sdk-review-checklist.md#c4-validation)；有原生边界时不可止步于托管封装 |
 | 首次审查无地图、已有地图失效、项目结构或关键链路变化 | [代码地图辅助](#code-map-assist) | 调用 `project-code-map` 建立或增量更新后继续本次审查 |
-| 对照策划文档、漏做／多做、实现与需求不一致 | [R1 需求拆解与依据](references/requirements-review-checklist.md#r1-requirements) | [R3 双向追踪](references/requirements-review-checklist.md#r3-traceability) |
+| 对照策划文档、跨步骤约束、漏做／多做、实现与需求不一致 | [R1 需求拆解与依据](references/requirements-review-checklist.md#r1-requirements) | [R3 规则依赖与双向追踪](references/requirements-review-checklist.md#r3-traceability) |
 | 正反逻辑、门槛边界、拒绝、取消、失败后仍有副作用 | [R2 条件与正反路径](references/requirements-review-checklist.md#r2-conditions) | 影响资源时读 [A2 资源与奖励](references/activity-reward-review-checklist.md#a2-rewards) |
 | 胜负、复活、暂停、输入锁、计时器、状态不对 | [S1 组合状态](references/state-machine-review-checklist.md#s1-states) | 延迟或竞争时读 [S2 事件时序](references/state-machine-review-checklist.md#s2-ordering) |
 | 卡住、一直等待、无法继续、退出后未恢复 | [S3 阻塞与恢复](references/state-machine-review-checklist.md#s3-recovery) | UI 开关与复用读 [F2 界面生命周期](references/framework-data-review-checklist.md#f2-ui) |
@@ -72,7 +74,7 @@ metadata:
 | 配置、读表、资源缺失、数据来源或版本不一致 | [F4 配置与资源](references/framework-data-review-checklist.md#f4-config) | 只追踪当前项目实际来源与消费链 |
 | 埋点／打点、上报时机、字段错误、重复上报或漏报；相关业务路径包含上报 | [F5 埋点上报](references/framework-data-review-checklist.md#f5-telemetry) | 条件分支读 [R2](references/requirements-review-checklist.md#r2-conditions)，延迟发送读 [S2](references/state-machine-review-checklist.md#s2-ordering) |
 | 新老功能耦合、公共基类／事件／调度改动、回归 | [F1 依赖与事件](references/framework-data-review-checklist.md#f1-dependencies) | 按受影响行为选择本表其他章节 |
-| 怎样写问题、手动复现、区分实测与推断 | [问题报告](#finding-report) | 有文档时读 [R4 核对结果](references/requirements-review-checklist.md#r4-results) |
+| 怎样写问题、手动复现、区分实测与推断 | [问题报告](#finding-report) | 需求结论或上游阻塞读 [R4 核对结果](references/requirements-review-checklist.md#r4-results) |
 
 ## 核心审查流程
 
