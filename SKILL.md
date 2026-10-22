@@ -2,7 +2,7 @@
 name: game-code-review
 description: >
   用于游戏项目的策划／需求一致性核对、功能验收、代码审查、改动回归和问题诊断，
-  包括整体回归 check、广告与 SDK、跨平台崩溃／闪退／卡死、正反逻辑、边界与异常操作、状态机、活动、玩法与道具、新老功能耦合及埋点上报。
+  包括整体回归 check、广告与 SDK、跨平台崩溃／闪退／卡死、正反逻辑、边界与异常操作、状态机、活动、玩法与道具、新老功能耦合、埋点上报及多语言／漏译／缺字检查。
   也用于项目问题台账、忽略／暂缓与修复复核，以及 /game-code-review、stop-review 的会话模式控制或查询。
 metadata:
   short-description: 审查游戏需求与逻辑，优先排查崩溃和广告风险，维护项目外地图与问题台账
@@ -69,6 +69,7 @@ metadata:
 | SDK 移除或升级、混淆／保留规则调整（如 R8／ProGuard）、支付或启动流程变化 | [F3 升级兼容](references/framework-data-review-checklist.md#f3-storage) | 必须评估老包覆盖升级；初始化依赖读 [F1](references/framework-data-review-checklist.md#f1-dependencies)，订单恢复读 [A2](references/activity-reward-review-checklist.md#a2-rewards) |
 | UI 不刷新、重复通知、空引用、Prefab／场景绑定 | [F2 界面生命周期](references/framework-data-review-checklist.md#f2-ui) | 异步回调读 [S2 事件时序](references/state-machine-review-checklist.md#s2-ordering) |
 | 配置、读表、资源缺失、数据来源或版本不一致 | [F4 配置与资源](references/framework-data-review-checklist.md#f4-config) | 只追踪当前项目实际来源与消费链 |
+| 多语言、本地化、漏译、缺字、语言切换、翻译表／字体资源、占位符或多语言 Key 引用 | [L1 多语言专项与内置工具](references/localization-review.md) | 按当前项目配置批量检查，再核实实际消费路径；UI 刷新补 F2，导表与打包来源补 F4 |
 | 埋点／打点、上报时机、字段错误、重复上报或漏报；相关业务路径包含上报 | [F5 埋点上报](references/framework-data-review-checklist.md#f5-telemetry) | 条件分支读 [R2](references/requirements-review-checklist.md#r2-conditions)，延迟发送读 [S2](references/state-machine-review-checklist.md#s2-ordering) |
 | 新老功能耦合、公共基类／事件／调度改动、回归 | [F1 依赖与事件](references/framework-data-review-checklist.md#f1-dependencies) | 按受影响行为选择本表其他章节 |
 | 判断是否查完、能否下结论、仍有证据缺口 | [V1 完成条件](references/evidence-validation.md#v1-completion) | 需求结论使用 R4；缺口不阻塞其他可独立检查的部分 |

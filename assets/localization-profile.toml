@@ -1,0 +1,47 @@
+# Copy outside the game project. Confirm languages and runtime behavior from current code.
+schema_version = 1
+base_language = "en"
+required_languages = ["en", "ja", "ko"]
+
+[[sources]]
+path = "Table/i18n.xlsx"
+sheet = "Sheet1"
+namespace = "main"
+header_row = 1
+data_start_row = 3
+key_column = "id"
+skip_key_prefixes = ["#"]
+language_columns = { en = "en", ja = "ja", ko = "ko" }
+
+[text]
+placeholder_styles = ["percent_named"]
+rich_text_profile = "unity_tmp_3"
+literal_backslash_n_is_newline = true
+
+[fonts.ja]
+adapter = "unity_tmp_static"
+assets = ["Client/Assets/Game/GameRes/Fonts/ja_font.asset"]
+require_static_coverage = false
+
+[fonts.ko]
+adapter = "unity_tmp_static"
+assets = ["Client/Assets/Game/GameRes/Fonts/ko_font.asset"]
+require_static_coverage = false
+
+[references]
+source_roots = ["Client/Assets/Game/Scripts"]
+asset_roots = ["Client/Assets/Game/GameRes"]
+lookup_functions = ["I18N.T"]
+component_names = ["I18NText", "I18NTextMeshPro"]
+key_fields = ["i18nCode"]
+namespace = "main"
+key_trim_chars = "\n\r "
+
+# Optional: only add user-confirmed, narrowly scoped exceptions.
+# [[exceptions]]
+# rule = "text.same_as_base"
+# namespace = "main"
+# key = "BRAND_NAME"
+# language = "ja"
+# value = "Brand"
+# reason = "用户确认品牌名不翻译"

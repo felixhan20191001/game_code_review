@@ -16,6 +16,7 @@
 | 活动、道具与奖励 | 活动周期、效果叠加与撤销、扣除／到账次数、持久化和恢复、新老功能耦合 |
 | 广告、SDK 与稳定性 | 启动、平台桥接、回调生命周期、崩溃／闪退／卡死、升级兼容 |
 | 埋点上报 | 触发时机、字段取值、重复／漏报，以及业务动作与统计记录是否一致 |
+| 多语言与字体 | 内置只读脚本检查翻译表、参数、富文本、静态字库和明确 Key 引用；Agent 补充有效路径、玩家影响和中文报告 |
 | 已知问题跟进 | 持久编号、去重、忽略／暂缓、修复复核、归档与复发追踪 |
 
 审查按问题类型选择对应清单。简单问题只追踪相关约束和直接依赖；复杂功能才展开必要的规则依赖，不要求每次重建完整关系图。上游问题导致下游无法验证时，会标明受阻范围，不直接把下游都判成 Bug。
@@ -31,7 +32,7 @@
 仓库根目录就是技能目录，请将技能目录命名为 game-code-review。
 ```
 
-安装时保留整个目录，包括 `references/`、`assets/` 和 `agents/`，不要只复制 `SKILL.md`。新技能未出现时重启 Codex，再通过技能选择器或 `$game-code-review` 确认能找到它。Codex 支持从其他仓库安装技能并自动发现变化，参见 [官方技能文档](https://learn.chatgpt.com/docs/build-skills#install-curated-skills-for-local-use)。
+安装时保留整个目录，包括 `references/`、`assets/`、`scripts/` 和 `agents/`，不要只复制 `SKILL.md`。新技能未出现时重启 Codex，再通过技能选择器或 `$game-code-review` 确认能找到它。Codex 支持从其他仓库安装技能并自动发现变化，参见 [官方技能文档](https://learn.chatgpt.com/docs/build-skills#install-curated-skills-for-local-use)。
 
 ### Codex：手动安装
 
@@ -97,6 +98,15 @@ git clone https://github.com/felixhan20191001/game_code_review.git \
 /game-code-review 检查当前分支相对主分支的改动及相关公共依赖，
 重点看广告返回、奖励到账和输入状态恢复，标明覆盖的平台和未验证部分。
 ```
+
+**多语言专项：**
+
+```text
+使用 game-code-review 检查当前项目的多语言，包含静态字库覆盖和 Key 引用。
+不要修改游戏文件；给出中文问题报告，区分确定数据差异、待验证风险和未覆盖范围。
+```
+
+专项使用内置 `scripts/check_localization.py`，需要 Python 3.11+ 及 `scripts/requirements-localization.txt` 中的依赖。让 Agent 按 [多语言专项说明](references/localization-review.md) 在项目外复用或建立环境和配置即可；无需接入 Unity 插件。普通审查不会因此启动多语言扫描。
 
 **复核已知问题：**
 
