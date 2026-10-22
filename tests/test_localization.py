@@ -272,6 +272,7 @@ reason = "确认的品牌名"
         report = json.loads((self.output / 'scan.json').read_text())
         self.assertFalse(report['summary']['complete'])
         self.assertIn('input.config_changed', self.rules(report))
+        self.assertEqual(report['coverage']['text'], 'partial')
 
     def test_wrong_configuration_container_yields_incomplete_json(self):
         self.table([('K', 'Play', '遊ぶ')])

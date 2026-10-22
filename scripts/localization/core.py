@@ -10,7 +10,7 @@ import tomllib
 
 from .text import check_entry
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 
 def digest(path):
@@ -120,7 +120,9 @@ class Scan:
         self.analyses = {}
         self.data = {'schema_version': 1, 'tool_version': VERSION, 'root': str(root),
                      'started_at': datetime.now(timezone.utc).isoformat(), 'inputs': {},
-                     'findings': [], 'blocked': [], 'coverage': {}, 'references': []}
+                     'findings': [], 'blocked': [], 'coverage': {
+                         check: 'pending' if check in checks else 'not_requested'
+                         for check in ('text', 'fonts', 'refs')}, 'references': []}
         self.incomplete = False
 
     def input(self, name):
@@ -153,6 +155,7 @@ class Scan:
             self.incomplete = True
         self.data['blocked'].append({'check': check, 'reason': reason,
                                      'key': (entry or {}).get('key', ''), 'language': language,
+                                     'namespace': (entry or {}).get('namespace', ''),
                                      'location': (entry or {}).get('key_location', {}), **details})
 
     def read_sources(self):
@@ -274,6 +277,19 @@ class Scan:
                 unchanged = False
             if not unchanged:
                 self.add('input.changed', 'error', '输入在扫描中发生变化，本轮不能视为完整快照', location={'file': path}, technical=True)
+        # Completion and coverage are different: rule errors do not imply failed
+        # execution, while failed inputs and unsupported portions reduce coverage.
+        affected = {b['check'] for b in self.data['blocked']}
+        for finding in self.data['findings']:
+            if finding['evidence_kind'] == 'execution':
+                prefix = finding['rule'].split('.')[0]
+                affected.update({'refs'} if prefix == 'refs' else
+                                {'fonts'} if prefix == 'font' else self.checks)
+        for check in self.checks:
+            state = self.data['coverage'][check]
+            if state == 'pending' or (check in affected and state != 'not_configured'):
+                self.data['coverage'][check] = 'partial'
+        self.data['entries'] = self.entries
         for finding in self.data['findings']:
             if finding['evidence_kind'] == 'execution':
                 continue

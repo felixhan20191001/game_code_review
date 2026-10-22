@@ -9,6 +9,69 @@ STRING_START = re.compile(r'(?:\$@|@\$|@|\$)?"')
 WORD = re.compile(r'[A-Za-z_][A-Za-z_0-9]*')
 
 
+def source_context(lines, line):
+    start = max(1, line - 2)
+    return {'start_line': start, 'text': '\n'.join(lines[start - 1:line + 2])}
+
+
+def object_index(documents):
+    """Parse a prefab hierarchy once, shared by all its localization fields."""
+    objects, transforms, object_transforms, fonts = {}, {}, {}, {}
+    for kind, identity, body, _ in documents:
+        if kind == 1:
+            obj = safe_data(body).get('GameObject', {})
+            if 'm_Name' in obj and not isinstance(obj['m_Name'], str):
+                # Unity names are strings even when unquoted "Yes", "No" or
+                # numbers trigger YAML 1.1 implicit scalar typing.
+                import yaml
+                obj['m_Name'] = yaml.load(body, Loader=yaml.BaseLoader)['GameObject']['m_Name']
+            objects[identity] = obj
+        elif kind in {4, 224}:
+            transform = safe_data(body).get('Transform' if kind == 4 else 'RectTransform', {})
+            transforms[identity] = transform
+            object_transforms[transform.get('m_GameObject', {}).get('fileID')] = identity
+        elif kind == 114 and re.search(r'^\s*(?:m_fontAsset|m_FontData):', body, re.M):
+            data = safe_data(body).get('MonoBehaviour', {})
+            object_id = data.get('m_GameObject', {}).get('fileID')
+            font = data.get('m_fontAsset') or data.get('m_FontData', {}).get('m_Font')
+            if object_id and font:
+                fonts.setdefault(object_id, []).append({'local_file_id': identity, 'font': font})
+    return objects, transforms, object_transforms, fonts
+
+
+def object_evidence(index, component):
+    """Serialized hierarchy only; inactive nodes may be activated at runtime."""
+    objects, transforms, object_transforms, fonts = index
+    hierarchy, visited = [], set()
+    object_id = component.get('m_GameObject', {}).get('fileID')
+    font_candidates = fonts.get(object_id, [])
+    complete = True
+    while object_id:
+        if object_id in visited or object_id not in objects:
+            complete = False
+            break
+        visited.add(object_id)
+        obj = objects[object_id]
+        hierarchy.append({'local_file_id': object_id, 'name': obj.get('m_Name'),
+                          'active_self': obj.get('m_IsActive')})
+        transform = transforms.get(object_transforms.get(object_id))
+        if transform is None:
+            complete = False
+            break
+        parent = transform.get('m_Father', {}).get('fileID')
+        if parent and parent not in transforms:
+            complete = False
+            break
+        object_id = transforms.get(parent, {}).get('m_GameObject', {}).get('fileID')
+    hierarchy.reverse()
+    return {'object_path': '/'.join(o['name'] or '?' for o in hierarchy),
+            'hierarchy': hierarchy, 'hierarchy_complete': complete and bool(hierarchy),
+            'component_enabled': component.get('m_Enabled'),
+            'script_guid': component.get('m_Script', {}).get('guid'),
+            'font_candidates': font_candidates,
+            'font': component.get('m_fontAsset') or component.get('m_FontData', {}).get('m_Font')}
+
+
 def tokens(text):
     """Skip comments/char literals and keep conditional context on string tokens."""
     i, line, conditions = 0, 1, []
@@ -125,6 +188,7 @@ def check_references(runner):
 
     def record(key, location, dynamic=False, conditional=(), extra=None):
         item = {'key': key, 'location': location, 'dynamic': dynamic,
+                'lookup_key': None if dynamic else key.strip(trim),
                 'conditional': list(conditional), 'namespace': namespace, **(extra or {})}
         runner.data['references'].append(item)
         if dynamic:
@@ -138,6 +202,7 @@ def check_references(runner):
         try:
             path = runner.input(str(source))
             text = path.read_text(encoding='utf-8-sig')
+            lines = text.splitlines()
             if not any(marker in text for marker in [*components, *(f.split('.')[0] for f in functions)]):
                 continue
             ts = list(tokens(text))
@@ -153,7 +218,8 @@ def check_references(runner):
             for i, token in enumerate(ts):
                 if token[0] == 'dynamic' and any(function in token[1] for function in functions):
                     record('', {'file': str(path), 'line': token[2]}, dynamic=True,
-                           conditional=token[3], extra={'context': '插值或 raw 字符串中的调用尚未展开'})
+                           conditional=token[3], extra={'context': source_context(lines, token[2]),
+                                                       'note': '插值或 raw 字符串中的调用尚未展开'})
                 for pattern in patterns:
                     n = len(pattern)
                     if [t[1] for t in ts[i:i+n]] != pattern or i+n >= len(ts) or ts[i+n][1] != '(':
@@ -162,26 +228,31 @@ def check_references(runner):
                     following = ts[i+n+2] if i+n+2 < len(ts) else None
                     simple = bool(arg and arg[0] == 'string' and following and following[1] in {',', ')'})
                     record(arg[1] if simple else '', {'file': str(path), 'line': token[2]},
-                           dynamic=not simple, conditional=token[3])
+                           dynamic=not simple, conditional=token[3],
+                           extra={'context': source_context(lines, token[2])})
         except Exception as exc:
             runner.add('refs.read', 'error', f'源码引用读取未完成：{exc}', location={'file': str(source)}, technical=True)
     for asset in sorted(assets):
         try:
             path = runner.input(str(asset))
             text = path.read_text(encoding='utf-8')
-            for kind, identity, body, line in blocks(text):
+            documents = list(blocks(text))
+            hierarchy_index = None
+            for kind, identity, body, line in documents:
                 if kind != 114 or not any(guid in body for guid in guids):
                     continue
                 data = safe_data(body).get('MonoBehaviour', {})
                 if data.get('m_Script', {}).get('guid') not in guids:
                     continue
+                if hierarchy_index is None:
+                    hierarchy_index = object_index(documents)
                 for field in settings.get('key_fields', ['i18nCode']):
                     key = data.get(field)
                     if isinstance(key, str) and key:
                         match = re.search(r'^\s*' + re.escape(field) + r':', body, re.M)
                         lineno = line + body.count('\n', 0, match.start()) if match else line
                         record(key, {'file': str(path), 'line': lineno, 'local_file_id': identity},
-                               extra={'component_field': field})
+                               extra={'component_field': field, **object_evidence(hierarchy_index, data)})
         except Exception as exc:
             runner.add('refs.read', 'error', f'序列化引用读取未完成：{exc}', location={'file': str(asset)}, technical=True)
     if assets and not guids:

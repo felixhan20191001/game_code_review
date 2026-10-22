@@ -12,6 +12,39 @@ def emit(value):
     print(json.dumps(value, ensure_ascii=False, indent=2))
 
 
+def inspect_report(data, args):
+    def identity(item):
+        return (not args.namespace or item.get('namespace') == args.namespace) and (
+            not args.key or item.get('key') == args.key or item.get('lookup_key') == args.key)
+
+    def language(item):
+        return not args.language or not item.get('language') or item['language'] == args.language
+
+    items = [f for f in data['findings']
+             if (not args.rule or f.get('rule') == args.rule)
+             and (not args.language or f.get('language') == args.language)
+             and (identity(f) or any(identity(a) for a in f.get('details', {}).get('affected', [])))]
+    page = lambda values: values[args.offset:args.offset + args.limit]
+    result = {'total': len(items), 'offset': args.offset, 'limit': args.limit, 'findings': page(items)}
+    if args.key:
+        # Evidence is linked by Key/namespace, not by rule or runtime language:
+        # a shared C# or prefab reference supports every language of that Key.
+        groups = {
+            'entries': [e for e in data.get('entries', []) if identity(e)
+                        and (not args.language or args.language in e['values'])],
+            'references': [r for r in data.get('references', []) if identity(r)],
+            'blocked': [b for b in data.get('blocked', []) if b.get('key') and identity(b) and language(b)],
+            'global_blocked': [b for b in data.get('blocked', []) if not b.get('key') and language(b)
+                               and (not args.namespace or not b.get('namespace') or b['namespace'] == args.namespace)],
+        }
+        result['evidence'] = {'entries_available': 'entries' in data,
+                              'totals': {name: len(values) for name, values in groups.items()},
+                              **{name: page(values) for name, values in groups.items()}}
+        result['coverage'] = data.get('coverage', {})
+        result['summary'] = data.get('summary', {})
+    return result
+
+
 def discover(root):
     tables, errors = [], []
     table_root = root / 'Table'
@@ -67,7 +100,7 @@ def main(argv=None):
     scan.add_argument('--out', type=Path, help='项目外输出目录，生成 scan.json；省略时创建独立批次目录')
     inspect = sub.add_parser('inspect', help='按需分页读取扫描证据')
     inspect.add_argument('--report', type=Path, required=True)
-    for name in ['rule', 'key', 'language']:
+    for name in ['rule', 'key', 'language', 'namespace']:
         inspect.add_argument('--' + name)
     inspect.add_argument('--limit', type=int, default=20)
     inspect.add_argument('--offset', type=int, default=0)
@@ -77,12 +110,7 @@ def main(argv=None):
             if args.limit < 1 or args.offset < 0:
                 raise ValueError('limit 必须大于零，offset 不能为负')
             data = json.loads(args.report.read_text(encoding='utf-8'))
-            items = [f for f in data['findings']
-                     if all(not getattr(args, k) or f.get(k) == getattr(args, k) for k in ['rule', 'language'])
-                     and (not args.key or f.get('key') == args.key or any(
-                         a.get('key') == args.key for a in f.get('details', {}).get('affected', [])))]
-            emit({'total': len(items), 'offset': args.offset, 'limit': args.limit,
-                  'findings': items[args.offset:args.offset + args.limit]})
+            emit(inspect_report(data, args))
             return 0
         root = args.root.expanduser().resolve(strict=True)
         if not root.is_dir():
@@ -108,16 +136,18 @@ def main(argv=None):
             runner = Scan(root, config, checks)
             runner.data['config'] = {'path': str(args.config.expanduser().resolve()), 'sha256': config_hash}
             runner.read_sources()
-            for check in ['text', 'fonts', 'refs']:
-                runner.data['coverage'][check] = 'not_requested' if check not in checks else 'completed'
             if 'text' in checks:
                 runner.check_text()
+                runner.data['coverage']['text'] = 'completed'
             if 'fonts' in checks:
                 from .fonts import check_fonts
                 check_fonts(runner)
             if 'refs' in checks:
                 from .references import check_references
                 check_references(runner)
+            for check in checks:
+                if runner.data['coverage'][check] == 'pending':
+                    runner.data['coverage'][check] = 'completed'
         data = runner.finish()
         output.mkdir(parents=True, exist_ok=True)
         import tempfile

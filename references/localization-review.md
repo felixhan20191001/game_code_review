@@ -18,6 +18,17 @@
 4. 按影响复核候选：参数追实际替换，缺字追界面字体与回退，语言支持追有效分支而不是注释或列名。
 5. 输出中文 Markdown 和 JSON 链接；达到父技能标准的问题才写既有台账。同文候选和未闭合影响的字体差异不批量分配 ISSUE，不擅自加入例外。
 
+### 检查深度与停止条件
+
+默认完成配置范围内的全量确定性扫描，再对异常候选核实直接消费路径。二进制导出解析、源字体字符映射和跨配置表追踪，仅在数据来源不一致、具体缺字／Key 异常或用户明确要求时补查；记录触发依据。
+
+- 候选的入口、触发条件、出错机制与影响已闭合，且核对了可能改变结论的覆盖／回退逻辑，即可形成明确问题并停止扩展该候选。
+- 已找到有效保护或覆盖逻辑并能排除该影响，记录排除依据后停止；Prefab 初始 inactive 不能单独作为不可达证据。
+- 关键证据需要缺失的资源、运行环境或外部约定时，记录具体缺口与最小验证动作后停止该支线，继续独立可查项。现有代码能补齐的关键证据仍应补查。
+- 收尾时每组候选有明确问题、已排除、待验证或未复核状态。只有新证据可能改变结论时才继续扩展；不为凑完整链图穷举所有调用方。剩余候选保留在结果中并说明数量与原因，不当作通过。
+
+地图仅更新本次发现的入口或依赖变化，问题详情链接既有台账；来源和版本未变的证据复用。工具执行失败先定位失败项，正常完成的独立检查结果可先交付。
+
 ## 工具调用
 
 入口为技能目录下 `scripts/check_localization.py`，Python 3.11+，依赖见 `scripts/requirements-localization.txt`。优先复用有依赖的环境；需要安装时在项目外建 venv，不修改游戏依赖、系统 Python 或 bundled runtime。本机已建环境为 `~/.local/share/game-code-review/localization/venv/bin/python`，其他机器须先确认可用环境。
@@ -28,13 +39,17 @@
 python "$SKILL_DIR/scripts/check_localization.py" discover --root "$ROOT"
 python "$SKILL_DIR/scripts/check_localization.py" scan --root "$ROOT" --config "$PROFILE"
 python "$SKILL_DIR/scripts/check_localization.py" inspect --report "$REPORT" --rule text.parameters --limit 20 --offset 0
+python "$SKILL_DIR/scripts/check_localization.py" inspect --report "$REPORT" --key UI_EXAMPLE --namespace main --limit 20
 ```
 
 - discover 只发现常见 Table/i18n、字体和入口候选，不决定产品支持语言。无法发现时直接搜索本项目并配置，不添加插件系统。
 - scan 默认全部 text,fonts,refs，用户限定范围时用 --checks 子集。--out 指项目外目录，生成 scan.json；省略时自动建立独立批次目录。
-- inspect 支持 --rule、--key、--language、--limit、--offset；默认每页 20 条，同时返回总数。
+- inspect 支持 --rule、--key、--namespace、--language、--limit、--offset；默认每页 20 条，同时返回总数。原有 total/findings 接口保留。
+- 带 --key 时额外返回 evidence：翻译 entries、关联 references、该 Key 的 blocked，以及不归属具体 Key 的 global_blocked。每组独立按同一 offset/limit 分页，totals 保留各组总数；--rule 只过滤 findings，语言筛选不会隐藏共享的源码／Prefab 引用。旧报告没有 entries 时明确返回 entries_available=false，可继续查看已有证据。
+- 引用包含源码行上下文，或序列化对象路径、各级 active_self、组件启用值、脚本 GUID。font 为本组件的字体引用；font_candidates 列出同一 GameObject 上字体组件的本地 ID 与字体引用，须核实实际绑定。hierarchy_complete=false 表示层级不完整；缺失字段为 null。对象状态和字体引用仅表示序列化快照，不能据此推定运行时可达性、最终字体或 Prefab 变体合并结果。
 - 退出码 0：已执行范围无规则错误，可有提示；1：存在规则错误；2：配置/读取/解析/输入变化等技术失败。
 - summary.complete 表示没有技术执行失败；还须看 coverage、blocked、未配置项，不能解读为所有运行场景覆盖。缺文件不能呈现为零问题。
+- coverage：completed 为该项已完成，partial 为受阻或执行失败，not_requested 为未请求，not_configured 为已请求但未配置。规则错误本身不降低完成状态；源码解析失败只降低 refs，翻译输入读取失败或快照变化会降低相关已执行检查的覆盖状态。
 
 ## 项目配置
 
@@ -61,11 +76,11 @@ python "$SKILL_DIR/scripts/check_localization.py" inspect --report "$REPORT" --r
 
 ## 中文报告
 
-使用 [报告模板](../assets/localization-report-template.md)，链接完整 JSON；沿用父技能报告格式，技术细节集中在末尾。
+使用 [简洁报告模板](../assets/localization-report-template.md)，默认只给状态摘要和明确问题，链接完整 JSON／既有台账；用户要求详细报告时按父技能完整格式展开。
 
-- 先报确定问题、重要风险、覆盖限制，分别统计数据差异和已确认玩家问题；同根因合并，保留全部位置。
+- 摘要分别统计明确问题、待验证／未复核候选，说明关键限制与检查是否完成；具体高风险单独提示。同根因合并，全部位置保留在关联证据中。
 - 标题用“某语言的说明可能漏掉目标数量”等玩家语言，不只写内部 Key。
-- 说明预期与实际、玩家影响、最小验证动作、验证状态、原因与文件位置。入口没证据时只给文件核对和验证方向，不编造复现。
+- 每项明确问题简写触发条件、玩家影响、验证状态和关键文件位置。需要详细复现时再补预期、步骤和验证动作；入口没证据时不编造复现。
 - 表内事实可写“静态数据检查确认”；正式问题证据状态用父技能四种取值。未运行不得写已实际复现，未闭合玩家链路留待复核。
-- 说明文件/语言/字体/引用范围、Agent 已复核范围、剩余候选、动态引用、未启用规则和真机限制。抽样复核不替代全量扫描。
+- 扫描范围与关键未覆盖项汇总进摘要，其余候选与取证明细链接 JSON。抽样复核不替代全量扫描。
 - 未获修复授权时，不改文案、生成字体或擅自忽略问题。
