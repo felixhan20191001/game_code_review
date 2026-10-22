@@ -159,6 +159,7 @@ ISSUE-0008 暂缓到下个版本；其他问题的决定保持不变。
 | [活动与奖励清单](references/activity-reward-review-checklist.md) | 活动周期、资源扣除与奖励提交 |
 | [框架与数据清单](references/framework-data-review-checklist.md) | 依赖、UI、存储、配置和埋点 |
 | [稳定性与 SDK 清单](references/stability-sdk-review-checklist.md) | 崩溃、平台边界、广告链路和验证 |
+| [证据核实与验证](references/evidence-validation.md) | 审查完成条件、复杂根因的替代解释与反证、验证方法的检错能力 |
 | [地图联动规则](references/code-map-assist.md) | 何时建图、更新、复用及失败回退 |
 | [台账规则](references/issue-tracking.md) / [空白模板](assets/issues-template.md) | 问题记录、用户决定、修复归档与复发 |
 | [调用配置](agents/openai.yaml) | 显示名称、默认提示和自动调用设置 |
