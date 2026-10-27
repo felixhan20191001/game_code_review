@@ -67,7 +67,7 @@ metadata:
 | 错扣／重扣、漏奖／重奖、购买／广告回调、中断领取 | [A2 资源与奖励](references/activity-reward-review-checklist.md#a2-rewards) | 写盘与恢复读 [F3 存储边界](references/framework-data-review-checklist.md#f3-storage) |
 | 重启丢数据、旧存档、升级、登录或换账号后错乱 | [F3 存储边界](references/framework-data-review-checklist.md#f3-storage) | 跨活动轮次读 [A1 活动生命周期](references/activity-reward-review-checklist.md#a1-activity) |
 | SDK 移除或升级、混淆／保留规则调整（如 R8／ProGuard）、支付或启动流程变化 | [F3 升级兼容](references/framework-data-review-checklist.md#f3-storage) | 必须评估老包覆盖升级；初始化依赖读 [F1](references/framework-data-review-checklist.md#f1-dependencies)，订单恢复读 [A2](references/activity-reward-review-checklist.md#a2-rewards) |
-| UI 不刷新、重复通知、空引用、Prefab／场景绑定 | [F2 界面生命周期](references/framework-data-review-checklist.md#f2-ui) | 异步回调读 [S2 事件时序](references/state-machine-review-checklist.md#s2-ordering) |
+| UI 不刷新、弹窗遮挡、跨界面跳转／返回异常、重复通知、空引用、Prefab／场景绑定 | [F2 界面生命周期](references/framework-data-review-checklist.md#f2-ui) | 异步回调读 [S2 事件时序](references/state-machine-review-checklist.md#s2-ordering) |
 | 配置、读表、资源缺失、数据来源或版本不一致 | [F4 配置与资源](references/framework-data-review-checklist.md#f4-config) | 只追踪当前项目实际来源与消费链 |
 | 多语言、本地化、漏译、缺字、翻译语义、语言切换、翻译表／字体资源、占位符或多语言 Key 引用 | [L1 多语言专项与内置工具](references/localization-review.md) | 按配置批量检查，逐行对照英文复核各语言语义，再核实候选实际消费路径；UI 刷新补 F2，导表与打包来源补 F4 |
 | 埋点／打点、上报时机、字段错误、重复上报或漏报；相关业务路径包含上报 | [F5 埋点上报](references/framework-data-review-checklist.md#f5-telemetry) | 条件分支读 [R2](references/requirements-review-checklist.md#r2-conditions)，延迟发送读 [S2](references/state-machine-review-checklist.md#s2-ordering) |
