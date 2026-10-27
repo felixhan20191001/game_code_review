@@ -20,6 +20,17 @@ def inspect_report(data, args):
     def language(item):
         return not args.language or not item.get('language') or item['language'] == args.language
 
+    if args.entries:
+        if args.rule:
+            raise ValueError('--entries 读取全部文案行，不能与 --rule 一起使用')
+        if not isinstance(data.get('entries'), list):
+            raise ValueError('报告不包含完整 entries，请重新 scan 后再做逐行语义复核')
+        entries = [e for e in data['entries'] if identity(e)
+                   and (not args.language or args.language in e['values'])]
+        return {'total': len(entries), 'offset': args.offset, 'limit': args.limit,
+                'entries': entries[args.offset:args.offset + args.limit],
+                'coverage': data.get('coverage', {}), 'summary': data.get('summary', {})}
+
     items = [f for f in data['findings']
              if (not args.rule or f.get('rule') == args.rule)
              and (not args.language or f.get('language') == args.language)
@@ -100,6 +111,7 @@ def main(argv=None):
     scan.add_argument('--out', type=Path, help='项目外输出目录，生成 scan.json；省略时创建独立批次目录')
     inspect = sub.add_parser('inspect', help='按需分页读取扫描证据')
     inspect.add_argument('--report', type=Path, required=True)
+    inspect.add_argument('--entries', action='store_true', help='分页读取全部文案行，供 Agent 逐行对照英文；不执行语义判定')
     for name in ['rule', 'key', 'language', 'namespace']:
         inspect.add_argument('--' + name)
     inspect.add_argument('--limit', type=int, default=20)

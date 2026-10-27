@@ -22,6 +22,46 @@ key_fields = ["i18nCode"]
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         return json.loads(proc.stdout)
 
+    def test_entry_pages_include_structurally_valid_rows_and_keep_english(self):
+        self.table([('A', 'Play', '遊ぶ', '플레이'),
+                    ('B', 'Exit', '終了', '종료'),
+                    ('C', 'Continue', '続ける', '계속')], header=('id', 'en', 'ja', 'ko'))
+        self.config(mapping='en="en", ja="ja", ko="ko"')
+        data, _ = self.scan(expected=0)
+        self.assertEqual(data['findings'], [])
+        first = self.inspect('--entries', '--language', 'ja', '--limit', 2)
+        second = self.inspect('--entries', '--language', 'ja', '--limit', 2, '--offset', 2)
+        self.assertEqual((first['total'], second['total']), (3, 3))
+        entries = first['entries'] + second['entries']
+        self.assertEqual([e['key'] for e in entries], ['A', 'B', 'C'])
+        self.assertEqual(entries[1]['values'], {'en': 'Exit', 'ja': '終了', 'ko': '종료'})
+        self.assertEqual(entries[2]['locations']['ja']['cell'], 'C4')
+
+    def test_entry_pages_preserve_duplicate_key_rows_and_namespace_filter(self):
+        self.table([('A', 'One', '一'), ('A', 'Two', '二')])
+        self.config()
+        self.scan(expected=1)
+        result = self.inspect('--entries', '--namespace', 'main', '--key', 'A')
+        self.assertEqual(result['total'], 2)
+        self.assertEqual([e['key_location']['cell'] for e in result['entries']], ['A2', 'A3'])
+        self.assertEqual(self.inspect('--entries', '--namespace', 'other')['total'], 0)
+
+    def test_entry_pages_reject_legacy_reports_instead_of_claiming_zero_rows(self):
+        self.output.mkdir()
+        (self.output / 'scan.json').write_text(json.dumps({'findings': []}))
+        proc = self.cli('inspect', '--report', self.output / 'scan.json', '--entries')
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn('entries', json.loads(proc.stdout)['error'])
+
+    def test_entry_pages_reject_rule_filter_to_prevent_skipping_normal_rows(self):
+        self.table([('A', 'Play', '遊ぶ')])
+        self.config()
+        self.scan(expected=0)
+        proc = self.cli('inspect', '--report', self.output / 'scan.json',
+                        '--entries', '--rule', 'text.empty')
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn('--rule', json.loads(proc.stdout)['error'])
+
     def test_unreadable_table_invalidates_all_dependent_checks(self):
         self.references()
         data, _ = self.scan('text,refs', expected=2)
