@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Code Map"
+  short_description: "在项目外生成和维护代码地图，按业务词定位入口、关键链路与源码"
+  default_prompt: "使用 $project-code-map 为当前项目生成或更新 Markdown 代码导航，默认存储在项目外的用户目录，按业务关键词关联真实入口、关键链路和源码证据，并记录项目根、版本、覆盖范围与待确认关系。"
+
+policy:
+  allow_implicit_invocation: true

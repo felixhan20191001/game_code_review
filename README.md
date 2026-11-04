@@ -32,7 +32,7 @@
 仓库根目录就是技能目录，请将技能目录命名为 game-code-review。
 ```
 
-安装时保留整个目录，包括 `references/`、`assets/`、`scripts/` 和 `agents/`，不要只复制 `SKILL.md`。新技能未出现时重启 Codex，再通过技能选择器或 `$game-code-review` 确认能找到它。Codex 支持从其他仓库安装技能并自动发现变化，参见 [官方技能文档](https://learn.chatgpt.com/docs/build-skills#install-curated-skills-for-local-use)。
+安装时保留整个目录，包括 `references/`、`assets/`、`scripts/`、`agents/` 和 `skills/`，不要只复制 `SKILL.md`。新技能未出现时重启 Codex，再通过技能选择器或 `$game-code-review` 确认能找到它。Codex 支持从其他仓库安装技能并自动发现变化，参见 [官方技能文档](https://learn.chatgpt.com/docs/build-skills#install-curated-skills-for-local-use)。
 
 ### Codex：手动安装
 
@@ -54,14 +54,16 @@ git clone https://github.com/felixhan20191001/game_code_review.git \
 
 ### 配套技能
 
-本仓库只包含 `game-code-review`，以下技能需要单独获取和安装，可向分享者获取：
+本仓库包含根目录的 `game-code-review` 和 [skills/project-code-map](skills/project-code-map/SKILL.md) 中的完整地图技能。审查优先使用已安装的地图技能；未单独安装时直接读取仓库附带版本，因此完整安装本仓库即可使用地图辅助。
 
-| 技能 | 何时需要 | 未安装时 |
+| 技能 | 何时需要 | 获取方式 |
 |---|---|---|
-| `project-code-map` | 自动建立／更新项目代码地图，并按统一规则定位项目外问题台账 | 继续直接审查源码；台账可使用用户明确指定或已确认的路径，没有可靠位置时说明限制 |
-| `test-case-five-columns` | 用户另外要求生成、整理或导出测试用例 | 普通问题报告仍可使用；生成五列用例前需补齐该技能 |
+| `project-code-map` | 自动建立／更新项目代码地图，并按统一规则定位项目外问题台账 | 本仓库已附带；仅在所有副本均不可用时回退到源码定位 |
+| `test-case-five-columns` | 用户另外要求生成、整理或导出测试用例 | 本仓库未包含，需单独获取；普通代码审查不依赖它 |
 
-配套技能不会被本技能自动下载安装。仅做代码审查不需要先生成测试用例。
+如果希望地图技能能在审查之外被单独选择，可将 `skills/project-code-map/` 完整复制到宿主技能目录，或让安装工具从本仓库的该子路径安装，名称保留 `project-code-map`。已有同名安装时沿用原目录，避免重复安装；单独安装的副本需单独更新，不会随根目录副本自动同步。
+
+仓库附带的地图技能保持独立结构；后续在本仓库的 `skills/project-code-map/` 维护和分享。审查不会自动下载安装其他技能。
 
 ## 使用方式
 
@@ -172,6 +174,7 @@ ISSUE-0008 暂缓到下个版本；其他问题的决定保持不变。
 | [框架与数据清单](references/framework-data-review-checklist.md) | 依赖、UI、存储、配置和埋点 |
 | [稳定性与 SDK 清单](references/stability-sdk-review-checklist.md) | 崩溃、平台边界、广告链路和验证 |
 | [证据核实与验证](references/evidence-validation.md) | 审查完成条件、复杂根因的替代解释与反证、验证方法的检错能力 |
+| [地图技能](skills/project-code-map/SKILL.md) | 独立的地图入口、引用文档、路径工具及调用配置 |
 | [地图联动规则](references/code-map-assist.md) | 何时建图、更新、复用及失败回退 |
 | [台账规则](references/issue-tracking.md) / [空白模板](assets/issues-template.md) | 问题记录、用户决定、修复归档与复发 |
 | [调用配置](agents/openai.yaml) | 显示名称、默认提示和自动调用设置 |
@@ -184,4 +187,4 @@ ISSUE-0008 暂缓到下个版本；其他问题的决定保持不变。
 git -C "$HOME/.agents/skills/game-code-review" pull --ff-only
 ```
 
-若安装在其他位置，将路径替换为实际目录。有自己修改的技能文件时先检查并保留改动，再处理更新；ZIP 安装则重新下载，保留本地定制后更新技能目录。项目外地图和台账独立于技能安装目录。
+以上更新也包含仓库内的地图技能；另外复制或安装的地图技能需同步更新其完整目录，先保留本地定制。若安装在其他位置，将路径替换为实际目录。有自己修改的技能文件时先检查并保留改动，再处理更新；ZIP 安装则重新下载，保留本地定制后更新技能目录。项目外地图和台账独立于技能安装目录。
